@@ -21,6 +21,7 @@ __pycache__/
 
 # YouTube cookies (contains session tokens)
 youtube_cookies.txt
+youtube_cookies_raw.txt
 
 # Claude
 .claude/
