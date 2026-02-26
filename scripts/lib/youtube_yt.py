@@ -42,6 +42,19 @@ def _log(msg: str):
     sys.stderr.flush()
 
 
+def _cookies_args() -> List[str]:
+    """Return yt-dlp cookies args if a cookies file exists.
+
+    Looks for youtube_cookies.txt in the skill root directory.
+    """
+    # Check skill root (next to scripts/)
+    skill_root = Path(__file__).parent.parent.parent
+    cookies_path = skill_root / "youtube_cookies.txt"
+    if cookies_path.exists():
+        return ["--cookies", str(cookies_path)]
+    return []
+
+
 def is_ytdlp_installed() -> bool:
     """Check if yt-dlp is available in PATH."""
     return shutil.which("yt-dlp") is not None
@@ -116,6 +129,7 @@ def search_youtube(
     # filtering returns 0 for evergreen topics like "thumbnail tips".
     cmd = [
         "yt-dlp",
+        *_cookies_args(),
         f"ytsearch{count}:{core_topic}",
         "--dump-json",
         "--no-warnings",
@@ -235,6 +249,7 @@ def fetch_transcript(video_id: str, temp_dir: str) -> Optional[str]:
     """
     cmd = [
         "yt-dlp",
+        *_cookies_args(),
         "--write-auto-subs",
         "--sub-lang", "en",
         "--sub-format", "vtt",

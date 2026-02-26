@@ -19,5 +19,8 @@ __pycache__/
 *.db
 *.db-journal
 
+# YouTube cookies (contains session tokens)
+youtube_cookies.txt
+
 # Claude
 .claude/
