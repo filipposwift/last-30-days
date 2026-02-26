@@ -28,7 +28,7 @@ Research any topic across Reddit, X, YouTube, and the web from the last 30 days.
 
 **Minimum:** `OPENAI_API_KEY` + `XAI_API_KEY` gives you Reddit + X. YouTube activates when `YOUTUBE_API_KEY` is set.
 
-**Runtime:** Python 3 + `pip install youtube-transcript-api`.
+**Runtime:** Python 3, `uv` (installs `youtube-transcript-api` automatically on first run).
 
 ## Installation
 

@@ -21,8 +21,7 @@ metadata:
         - YOUTUBE_API_KEY
       bins:
         - python3
-      pips:
-        - youtube-transcript-api
+        - uv
     primaryEnv: OPENAI_API_KEY
     files:
       - 'scripts/*'
@@ -96,7 +95,7 @@ This text MUST appear before you call any tools. It confirms to the user that yo
 **CRITICAL: Run this command in the FOREGROUND with a 5-minute timeout. Do NOT use run_in_background. The full output contains Reddit, X, AND YouTube data that you need to read completely.**
 
 ```bash
-python3 "{baseDir}/scripts/last30days.py" "$ARGUMENTS" --emit=compact
+uv run --with youtube-transcript-api python3 "{baseDir}/scripts/last30days.py" "$ARGUMENTS" --emit=compact
 ```
 
 Use a **timeout of 300000** (5 minutes) on the Bash call. The script typically takes 1-3 minutes.
