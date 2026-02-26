@@ -1,4 +1,4 @@
-"""Output rendering for last30days skill."""
+"""Output rendering for last-30-days skill."""
 
 import json
 import os
@@ -215,6 +215,19 @@ def render_compact(report: schema.Report, limit: int = 15, missing_keys: str = "
             lines.append(f"  *{item.why_relevant}*")
             lines.append("")
 
+    # Google AI Overview (from DataForSEO)
+    if report.ai_overview:
+        lines.append("### Google AI Overview")
+        lines.append("")
+        # Truncate to ~500 words
+        words = report.ai_overview.split()
+        if len(words) > 500:
+            truncated = " ".join(words[:500]) + "..."
+        else:
+            truncated = report.ai_overview
+        lines.append(truncated)
+        lines.append("")
+
     # Web items (if any - populated by the assistant)
     if report.web_error:
         lines.append("### Web Results")
@@ -287,6 +300,13 @@ def render_source_status(report: schema.Report, source_info: dict = None) -> str
     else:
         reason = source_info.get("youtube_skip_reason", "yt-dlp not installed (brew install yt-dlp)")
         lines.append(f"  ⏭️ YouTube: skipped — {reason}")
+
+    # DataForSEO (Google AI Overview)
+    if report.ai_overview:
+        lines.append("  ✅ Google AI Overview: available")
+    else:
+        reason = source_info.get("dataforseo_skip_reason", "No DATAFORSEO_LOGIN")
+        lines.append(f"  ⏭️ Google AI Overview: skipped — {reason}")
 
     # Web
     if report.web_error:

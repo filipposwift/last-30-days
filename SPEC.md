@@ -1,8 +1,8 @@
-# last30days Skill Specification
+# last-30-days Skill Specification
 
 ## Overview
 
-`last30days` is a Claude Code skill that researches a given topic across Reddit and X (Twitter) using the OpenAI Responses API and xAI Responses API respectively. It enforces a strict 30-day recency window, popularity-aware ranking, and produces actionable outputs including best practices, a prompt pack, and a reusable context snippet.
+`last-30-days` is a skill that researches a given topic across Reddit and X (Twitter) using the OpenAI Responses API and xAI Responses API respectively. It enforces a strict 30-day recency window, popularity-aware ranking, and produces actionable outputs including best practices, a prompt pack, and a reusable context snippet.
 
 The skill operates in three modes depending on available API keys: **reddit-only** (OpenAI key), **x-only** (xAI key), or **both** (full cross-validation). It uses automatic model selection to stay current with the latest models from both providers, with optional pinning for stability.
 
@@ -31,7 +31,7 @@ Other skills can import the research context in several ways:
 ### Inline Context Injection
 ```markdown
 ## Recent Research Context
-!python3 ~/.claude/skills/last30days/scripts/last30days.py "your topic" --emit=context
+!python3 ~/.claude/skills/last-30-days/scripts/last30days.py "your topic" --emit=context
 ```
 
 ### Read from File
@@ -42,19 +42,19 @@ Other skills can import the research context in several ways:
 
 ### Get Path for Dynamic Loading
 ```bash
-CONTEXT_PATH=$(python3 ~/.claude/skills/last30days/scripts/last30days.py "topic" --emit=path)
+CONTEXT_PATH=$(python3 ~/.claude/skills/last-30-days/scripts/last30days.py "topic" --emit=path)
 cat "$CONTEXT_PATH"
 ```
 
 ### JSON for Programmatic Use
 ```bash
-python3 ~/.claude/skills/last30days/scripts/last30days.py "topic" --emit=json > research.json
+python3 ~/.claude/skills/last-30-days/scripts/last30days.py "topic" --emit=json > research.json
 ```
 
 ## CLI Reference
 
 ```
-python3 ~/.claude/skills/last30days/scripts/last30days.py <topic> [options]
+python3 ~/.claude/skills/last-30-days/scripts/last30days.py <topic> [options]
 
 Options:
   --refresh           Bypass cache and fetch fresh data

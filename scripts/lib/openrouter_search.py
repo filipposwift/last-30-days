@@ -1,4 +1,4 @@
-"""Perplexity Sonar Pro web search via OpenRouter for last30days skill.
+"""Perplexity Sonar Pro web search via OpenRouter for last-30-days skill.
 
 Uses OpenRouter's chat completions API with Perplexity's Sonar Pro model,
 which has built-in web search and returns citations with URLs, titles, and dates.
@@ -71,8 +71,8 @@ def search_web(
         json_data=payload,
         headers={
             "Authorization": f"Bearer {api_key}",
-            "HTTP-Referer": "https://github.com/mvanhorn/last30days-openclaw",
-            "X-Title": "last30days",
+            "HTTP-Referer": "https://github.com/openclaw/openclaw",
+            "X-Title": "last-30-days",
         },
         timeout=30,
     )

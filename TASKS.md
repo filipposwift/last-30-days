@@ -1,4 +1,4 @@
-# last30days Implementation Tasks
+# last-30-days Implementation Tasks
 
 ## Setup & Configuration
 - [x] Create directory structure

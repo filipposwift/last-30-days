@@ -1,4 +1,4 @@
-"""Data schemas for last30days skill."""
+"""Data schemas for last-30-days skill."""
 
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
@@ -229,6 +229,8 @@ class Report:
     x_error: Optional[str] = None
     web_error: Optional[str] = None
     youtube_error: Optional[str] = None
+    # AI overview from DataForSEO Google AI Mode
+    ai_overview: str = ""
     # Cache info
     from_cache: bool = False
     cache_age_hours: Optional[float] = None
@@ -252,6 +254,8 @@ class Report:
             'prompt_pack': self.prompt_pack,
             'context_snippet_md': self.context_snippet_md,
         }
+        if self.ai_overview:
+            d['ai_overview'] = self.ai_overview
         if self.reddit_error:
             d['reddit_error'] = self.reddit_error
         if self.x_error:
@@ -374,6 +378,7 @@ class Report:
             best_practices=data.get('best_practices', []),
             prompt_pack=data.get('prompt_pack', []),
             context_snippet_md=data.get('context_snippet_md', ''),
+            ai_overview=data.get('ai_overview', ''),
             reddit_error=data.get('reddit_error'),
             x_error=data.get('x_error'),
             web_error=data.get('web_error'),

@@ -1,4 +1,4 @@
-"""WebSearch module for last30days skill.
+"""WebSearch module for last-30-days skill.
 
 NOTE: WebSearch uses the assistant's built-in web search tool, which runs inside the host environment.
 Unlike Reddit/X which use external APIs, web search results are obtained by the assistant

@@ -1,4 +1,4 @@
-"""Date utilities for last30days skill."""
+"""Date utilities for last-30-days skill."""
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple

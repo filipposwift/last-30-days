@@ -1,4 +1,4 @@
-"""Popularity-aware scoring for last30days skill."""
+"""Popularity-aware scoring for last-30-days skill."""
 
 import math
 from typing import List, Optional, Union

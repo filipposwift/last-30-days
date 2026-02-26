@@ -1,4 +1,4 @@
-"""HTTP utilities for last30days skill (stdlib only)."""
+"""HTTP utilities for last-30-days skill (stdlib only)."""
 
 import json
 import os
@@ -20,7 +20,7 @@ def log(msg: str):
         sys.stderr.flush()
 MAX_RETRIES = 5
 RETRY_DELAY = 2.0
-USER_AGENT = "last30days-skill/2.1 (Assistant Skill)"
+USER_AGENT = "last-30-days/1.0 (Assistant Skill)"
 
 
 class HTTPError(Exception):

@@ -1,4 +1,4 @@
-"""Parallel AI web search for last30days skill.
+"""Parallel AI web search for last-30-days skill.
 
 Uses the Parallel AI Search API to find web content (blogs, docs, news, tutorials).
 This is the preferred web search backend -- it returns LLM-optimized results

@@ -1,16 +1,15 @@
 {
-  "name": "last30days",
+  "name": "last-30-days",
   "owner": {
-    "name": "mvanhorn",
-    "url": "https://github.com/mvanhorn"
+    "name": "filippo"
   },
   "metadata": {
     "description": "Research any topic from the last 30 days across Reddit, X, YouTube, and the web",
-    "version": "2.1.0"
+    "version": "1.0.0"
   },
   "plugins": [
     {
-      "name": "last30days",
+      "name": "last-30-days",
       "source": "."
     }
   ]

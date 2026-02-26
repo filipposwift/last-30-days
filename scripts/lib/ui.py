@@ -1,4 +1,4 @@
-"""Terminal UI utilities for last30days skill."""
+"""Terminal UI utilities for last-30-days skill."""
 
 import os
 import sys
@@ -33,7 +33,7 @@ BANNER = f"""{Colors.PURPLE}{Colors.BOLD}
 {Colors.RESET}{Colors.DIM}  30 days of research. 30 seconds of work.{Colors.RESET}
 """
 
-MINI_BANNER = f"""{Colors.PURPLE}{Colors.BOLD}/last30days{Colors.RESET} {Colors.DIM}· researching...{Colors.RESET}"""
+MINI_BANNER = f"""{Colors.PURPLE}{Colors.BOLD}/last-30-days{Colors.RESET} {Colors.DIM}· researching...{Colors.RESET}"""
 
 # Fun status messages for each phase
 REDDIT_MESSAGES = [
@@ -195,7 +195,7 @@ class ProgressDisplay:
             sys.stderr.write(f"{Colors.DIM}Topic: {Colors.RESET}{Colors.BOLD}{self.topic}{Colors.RESET}\n\n")
         else:
             # Simple text for non-TTY
-            sys.stderr.write(f"/last30days · researching: {self.topic}\n")
+            sys.stderr.write(f"/last-30-days · researching: {self.topic}\n")
         sys.stderr.flush()
 
     def start_reddit(self):
@@ -334,7 +334,7 @@ def show_diagnostic_banner(diag: dict):
 
     if IS_TTY:
         lines.append(f"{Colors.DIM}┌─────────────────────────────────────────────────────┐{Colors.RESET}")
-        lines.append(f"{Colors.DIM}│{Colors.RESET} {Colors.BOLD}/last30days v2.1 — Source Status{Colors.RESET}                    {Colors.DIM}│{Colors.RESET}")
+        lines.append(f"{Colors.DIM}│{Colors.RESET} {Colors.BOLD}/last-30-days — Source Status{Colors.RESET}                    {Colors.DIM}│{Colors.RESET}")
         lines.append(f"{Colors.DIM}│{Colors.RESET}                                                     {Colors.DIM}│{Colors.RESET}")
 
         # Reddit
@@ -342,14 +342,14 @@ def show_diagnostic_banner(diag: dict):
             lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.GREEN}✅ Reddit{Colors.RESET}    — OPENAI_API_KEY found                {Colors.DIM}│{Colors.RESET}")
         else:
             lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.RED}❌ Reddit{Colors.RESET}    — No OPENAI_API_KEY                    {Colors.DIM}│{Colors.RESET}")
-            lines.append(f"{Colors.DIM}│{Colors.RESET}     └─ Add to ~/.config/last30days/.env            {Colors.DIM}│{Colors.RESET}")
+            lines.append(f"{Colors.DIM}│{Colors.RESET}     └─ Add to ~/.config/last-30-days/.env            {Colors.DIM}│{Colors.RESET}")
 
         # X/Twitter
         if has_x:
             lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.GREEN}✅ X/Twitter{Colors.RESET} — XAI_API_KEY found                 {Colors.DIM}│{Colors.RESET}")
         else:
             lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.RED}❌ X/Twitter{Colors.RESET} — No XAI_API_KEY                      {Colors.DIM}│{Colors.RESET}")
-            lines.append(f"{Colors.DIM}│{Colors.RESET}     └─ Add to ~/.config/last30days/.env            {Colors.DIM}│{Colors.RESET}")
+            lines.append(f"{Colors.DIM}│{Colors.RESET}     └─ Add to ~/.config/last-30-days/.env            {Colors.DIM}│{Colors.RESET}")
 
         # YouTube
         if has_youtube:
@@ -366,25 +366,25 @@ def show_diagnostic_banner(diag: dict):
             lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.YELLOW}⚡ Web{Colors.RESET}       — Using assistant's search tool       {Colors.DIM}│{Colors.RESET}")
 
         lines.append(f"{Colors.DIM}│{Colors.RESET}                                                     {Colors.DIM}│{Colors.RESET}")
-        lines.append(f"{Colors.DIM}│{Colors.RESET}  Config: {Colors.BOLD}~/.config/last30days/.env{Colors.RESET}                  {Colors.DIM}│{Colors.RESET}")
+        lines.append(f"{Colors.DIM}│{Colors.RESET}  Config: {Colors.BOLD}~/.config/last-30-days/.env{Colors.RESET}                  {Colors.DIM}│{Colors.RESET}")
         lines.append(f"{Colors.DIM}└─────────────────────────────────────────────────────┘{Colors.RESET}")
     else:
         # Plain text for non-TTY (Claude Code / Codex)
         lines.append("┌─────────────────────────────────────────────────────┐")
-        lines.append("│ /last30days v2.1 — Source Status                    │")
+        lines.append("│ /last-30-days — Source Status                    │")
         lines.append("│                                                     │")
 
         if has_openai:
             lines.append("│  ✅ Reddit    — OPENAI_API_KEY found                │")
         else:
             lines.append("│  ❌ Reddit    — No OPENAI_API_KEY                    │")
-            lines.append("│     └─ Add to ~/.config/last30days/.env            │")
+            lines.append("│     └─ Add to ~/.config/last-30-days/.env            │")
 
         if has_x:
             lines.append("│  ✅ X/Twitter — XAI_API_KEY found                    │")
         else:
             lines.append("│  ❌ X/Twitter — No XAI_API_KEY                      │")
-            lines.append("│     └─ Add to ~/.config/last30days/.env            │")
+            lines.append("│     └─ Add to ~/.config/last-30-days/.env            │")
 
         if has_youtube:
             lines.append("│  ✅ YouTube   — yt-dlp found                        │")
@@ -398,7 +398,7 @@ def show_diagnostic_banner(diag: dict):
             lines.append("│  ⚡ Web       — Using assistant's search tool       │")
 
         lines.append("│                                                     │")
-        lines.append("│  Config: ~/.config/last30days/.env                  │")
+        lines.append("│  Config: ~/.config/last-30-days/.env                  │")
         lines.append("└─────────────────────────────────────────────────────┘")
 
     sys.stderr.write("\n".join(lines) + "\n\n")

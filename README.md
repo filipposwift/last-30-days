@@ -1,6 +1,6 @@
-# /last30days
+# /last-30-days
 
-Personal fork of [last30days-skill](https://github.com/mvanhorn/last30days-skill) v2.1, maintained by Filippo for use on [OpenClaw](https://github.com/openclaw/openclaw).
+Research skill maintained by Filippo for use on [OpenClaw](https://github.com/openclaw/openclaw).
 
 Research any topic across Reddit, X, YouTube, and the web from the last 30 days. Surface what people are actually discussing, recommending, and debating right now — then write copy-paste-ready prompts.
 
@@ -24,6 +24,7 @@ Research any topic across Reddit, X, YouTube, and the web from the last 30 days.
 | Web search (Brave) | `BRAVE_API_KEY` | No |
 | Web search (Parallel AI) | `PARALLEL_API_KEY` | No |
 | Web search (OpenRouter) | `OPENROUTER_API_KEY` | No |
+| Google AI Overview (DataForSEO) | `DATAFORSEO_LOGIN` + `DATAFORSEO_PASSWORD` | No |
 
 **Minimum:** `OPENAI_API_KEY` + `XAI_API_KEY` gives you Reddit + X. YouTube activates automatically when `yt-dlp` is in PATH.
 
@@ -33,7 +34,7 @@ Research any topic across Reddit, X, YouTube, and the web from the last 30 days.
 
 ```bash
 # Claude Code
-git clone <this-repo> ~/.claude/skills/last30days
+git clone <this-repo> ~/.claude/skills/last-30-days
 
 # Verify everything works
 python3 scripts/last30days.py --diagnose
@@ -42,7 +43,7 @@ python3 scripts/last30days.py --diagnose
 ## Usage
 
 ```
-/last30days <topic>
+/last-30-days <topic>
 ```
 
 ## Options
@@ -57,20 +58,6 @@ python3 scripts/last30days.py --diagnose
 | `--include-web` | Add native web search (requires web search API key) |
 | `--store` | Persist findings to SQLite (for watchlist) |
 | `--diagnose` | Show source availability and exit |
-
-## Open Variant (Watchlist + Briefings)
-
-The `variants/open/` variant adds watchlists, briefings, and history. Designed for always-on bots like OpenClaw:
-
-```bash
-cp variants/open/SKILL.md SKILL.md
-
-last30 watch competitor X every week
-last30 watch AI video tools monthly
-last30 watch run-all
-```
-
-Results accumulate in a local SQLite database. You need cron or an always-on bot to trigger scheduled runs.
 
 ## How It Works
 
@@ -90,7 +77,7 @@ These show how different query types produce different outputs. Useful reference
 
 ### Prompting: Nano Banana Pro (JSON format discovery)
 
-**Query:** `/last30days nano banana pro prompts for Gemini`
+**Query:** `/last-30-days nano banana pro prompts for Gemini`
 
 The skill discovered that JSON prompts are the dominant format for this tool — not prose. Key patterns found:
 
@@ -118,11 +105,11 @@ The skill discovered that JSON prompts are the dominant format for this tool —
 }
 ```
 
-This shows how /last30days learns the **format the community actually uses**, not what you'd guess.
+This shows how /last-30-days learns the **format the community actually uses**, not what you'd guess.
 
 ### Recommendations: Best ClawdBot Use Cases
 
-**Query:** `/last30days best clawdbot use cases`
+**Query:** `/last-30-days best clawdbot use cases`
 
 When query type is RECOMMENDATIONS, the output is a ranked list of specific things with sources:
 
@@ -142,7 +129,7 @@ This shows how RECOMMENDATIONS mode extracts **specific names and counts**, not 
 
 ### News: DeepSeek R1 (Community Sentiment)
 
-**Query:** `/last30days what are people saying about DeepSeek R1`
+**Query:** `/last-30-days what are people saying about DeepSeek R1`
 
 NEWS/GENERAL mode synthesizes community sentiment with key insights:
 
@@ -159,7 +146,7 @@ Community sentiment curated from both sides:
 
 ### Workflow Discovery: Codex + Claude Code
 
-**Query:** `/last30days how do I use Codex with Claude Code on same app`
+**Query:** `/last-30-days how do I use Codex with Claude Code on same app`
 
 The skill discovered an **emerging workflow pattern** not found in any docs:
 
@@ -182,14 +169,6 @@ When the user asked "how do I build a review loop workflow", the skill generated
 | `reddit.com` | Thread URLs (public JSON) |
 | `youtube.com` (via yt-dlp) | Search query |
 | Optional web APIs (Brave/Parallel/OpenRouter) | Search query |
+| DataForSEO (`api.dataforseo.com`) | Search query |
 
 API keys are never shared across providers. Research data stays local.
-
-## Changes from Original
-
-- Removed X authentication via browser cookies — now uses `XAI_API_KEY` only
-- Simplified README for internal OpenClaw use
-
----
-
-*Fork of [mvanhorn/last30days-skill](https://github.com/mvanhorn/last30days-skill) v2.1. Credits to the original author.*

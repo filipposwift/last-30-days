@@ -1,4 +1,4 @@
-"""Brave Search web search for last30days skill.
+"""Brave Search web search for last-30-days skill.
 
 Uses the Brave Search API as a fallback web search backend.
 Simple, cheap (free tier: 2,000 queries/month), widely available.

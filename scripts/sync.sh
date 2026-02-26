@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# sync.sh - Deploy last30days skill to all host locations
+# sync.sh - Deploy last-30-days skill to all host locations
 # Usage: bash scripts/sync.sh  (run from repo root)
 set -euo pipefail
 

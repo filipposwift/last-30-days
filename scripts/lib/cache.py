@@ -1,4 +1,4 @@
-"""Caching utilities for last30days skill."""
+"""Caching utilities for last-30-days skill."""
 
 import hashlib
 import json

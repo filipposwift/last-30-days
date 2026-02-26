@@ -95,6 +95,7 @@ def _install_global_timeout(timeout_seconds: int):
         timer.start()
 
 from lib import (
+    dataforseo_search,
     dates,
     dedupe,
     entity_extract,
@@ -329,6 +330,39 @@ def _search_web(
     return raw_results, web_error
 
 
+def _search_dataforseo(
+    topic: str,
+    config: dict,
+    from_date: str,
+    to_date: str,
+    depth: str,
+) -> tuple:
+    """Search via DataForSEO Google AI Mode (runs in thread).
+
+    Returns:
+        Tuple of (web_items, ai_overview, error)
+        web_items are raw dicts ready for websearch.normalize_websearch_items()
+    """
+    try:
+        raw_results, ai_overview = dataforseo_search.search_web(
+            topic, from_date, to_date,
+            config["DATAFORSEO_LOGIN"],
+            config["DATAFORSEO_PASSWORD"],
+            depth=depth,
+        )
+    except Exception as e:
+        return [], "", f"{type(e).__name__}: {e}"
+
+    # Add IDs with D prefix (DataForSEO) and date_confidence
+    for i, item in enumerate(raw_results):
+        item.setdefault("id", f"D{i+1}")
+        if not item.get("date"):
+            item["date_confidence"] = "low"
+        item.setdefault("why_relevant", "")
+
+    return raw_results, ai_overview, None
+
+
 def _run_supplemental(
     topic: str,
     reddit_items: list,
@@ -468,7 +502,8 @@ def run_research(
     Returns:
         Tuple of (reddit_items, x_items, youtube_items, web_items, web_needed,
                   raw_openai, raw_xai, raw_reddit_enriched,
-                  reddit_error, x_error, youtube_error, web_error)
+                  reddit_error, x_error, youtube_error, web_error,
+                  ai_overview, dataforseo_error)
 
     Note: web_needed is True when web search should be performed by the assistant
     (i.e., no native web search API keys are configured). When native web search
@@ -489,6 +524,11 @@ def run_research(
     x_error = None
     youtube_error = None
     web_error = None
+    ai_overview = ""
+    dataforseo_error = None
+
+    # Check DataForSEO availability
+    has_dfs = env.has_dataforseo(config)
 
     # Determine web search mode
     do_web = sources in ("all", "web", "reddit-web", "x-web")
@@ -530,18 +570,19 @@ def run_research(
                     progress.show_error(f"YouTube error: {e}")
             if progress:
                 progress.end_youtube(len(youtube_items))
-        return reddit_items, x_items, youtube_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, web_error
+        return reddit_items, x_items, youtube_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, web_error, ai_overview, dataforseo_error
 
     # Determine which searches to run
     do_reddit = sources in ("both", "reddit", "all", "reddit-web")
     do_x = sources in ("both", "x", "all", "x-web")
 
-    # Run Reddit, X, YouTube, and Web searches in parallel
+    # Run Reddit, X, YouTube, Web, and DataForSEO searches in parallel
     reddit_future = None
     x_future = None
     youtube_future = None
     web_future = None
-    max_workers = 2 + (1 if run_youtube else 0) + (1 if web_backend else 0)
+    dataforseo_future = None
+    max_workers = 2 + (1 if run_youtube else 0) + (1 if web_backend else 0) + (1 if has_dfs else 0)
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit searches
@@ -573,6 +614,13 @@ def run_research(
             sys.stderr.flush()
             web_future = executor.submit(
                 _search_web, topic, config, from_date, to_date, depth
+            )
+
+        if has_dfs:
+            sys.stderr.write("[DataForSEO] Searching Google AI Mode\n")
+            sys.stderr.flush()
+            dataforseo_future = executor.submit(
+                _search_dataforseo, topic, config, from_date, to_date, depth
             )
 
         # Collect results (with timeouts to prevent indefinite blocking)
@@ -640,6 +688,24 @@ def run_research(
                 if progress:
                     progress.show_error(f"Web error: {e}")
             sys.stderr.write(f"[web] {len(web_items)} results\n")
+            sys.stderr.flush()
+
+        if dataforseo_future:
+            try:
+                dfs_items, ai_overview, dataforseo_error = dataforseo_future.result(timeout=future_timeout)
+                if dataforseo_error and progress:
+                    progress.show_error(f"DataForSEO error: {dataforseo_error}")
+                # Append DataForSEO reference URLs to web_items
+                web_items.extend(dfs_items)
+            except TimeoutError:
+                dataforseo_error = f"DataForSEO search timed out after {future_timeout}s"
+                if progress:
+                    progress.show_error(dataforseo_error)
+            except Exception as e:
+                dataforseo_error = f"{type(e).__name__}: {e}"
+                if progress:
+                    progress.show_error(f"DataForSEO error: {e}")
+            sys.stderr.write(f"[DataForSEO] done\n")
             sys.stderr.flush()
 
     # Enrich Reddit items with real data (parallel, capped)
@@ -725,7 +791,7 @@ def run_research(
         if sup_x:
             x_items.extend(sup_x)
 
-    return reddit_items, x_items, youtube_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, web_error
+    return reddit_items, x_items, youtube_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, web_error, ai_overview, dataforseo_error
 
 
 def main():
@@ -843,6 +909,7 @@ def main():
             "parallel_ai": bool(config.get("PARALLEL_API_KEY")),
             "brave": bool(config.get("BRAVE_API_KEY")),
             "openrouter": bool(config.get("OPENROUTER_API_KEY")),
+            "dataforseo": env.has_dataforseo(config),
         }
         print(json.dumps(diag, indent=2))
         sys.exit(0)
@@ -864,6 +931,7 @@ def main():
         "x_source": x_source_status["source"],
         "youtube": has_ytdlp,
         "web_search_backend": web_source,
+        "dataforseo": env.has_dataforseo(config),
     }
     ui.show_diagnostic_banner(diag)
 
@@ -932,7 +1000,7 @@ def main():
         mode = sources
 
     # Run research
-    reddit_items, x_items, youtube_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, web_error = run_research(
+    reddit_items, x_items, youtube_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, web_error, ai_overview, dataforseo_error = run_research(
         args.topic,
         sources,
         config,
@@ -1010,6 +1078,7 @@ def main():
     report.x_error = x_error
     report.youtube_error = youtube_error
     report.web_error = web_error
+    report.ai_overview = ai_overview or ""
 
     # Generate context snippet
     report.context_snippet_md = render.render_context_snippet(report)
@@ -1031,6 +1100,10 @@ def main():
         source_info["x_skip_reason"] = "No XAI_API_KEY (add to ~/.config/last30days/.env)"
     if not has_ytdlp:
         source_info["youtube_skip_reason"] = "yt-dlp not installed — fix: brew install yt-dlp"
+    if not env.has_dataforseo(config):
+        source_info["dataforseo_skip_reason"] = "No DATAFORSEO_LOGIN (add to ~/.config/last30days/.env)"
+    elif dataforseo_error:
+        source_info["dataforseo_skip_reason"] = dataforseo_error
     if not web_source:
         source_info["web_skip_reason"] = "assistant will use WebSearch (add BRAVE_API_KEY for native search)"
 

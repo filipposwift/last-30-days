@@ -1,4 +1,4 @@
-"""YouTube search and transcript extraction via yt-dlp for /last30days v2.1.
+"""YouTube search and transcript extraction via yt-dlp for /last-30-days.
 
 Uses yt-dlp (https://github.com/yt-dlp/yt-dlp) for both YouTube search and
 transcript extraction. No API keys needed — just have yt-dlp installed.

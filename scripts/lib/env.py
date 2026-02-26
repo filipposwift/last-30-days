@@ -1,4 +1,4 @@
-"""Environment and API key management for last30days skill."""
+"""Environment and API key management for last-30-days skill."""
 
 import json
 import os
@@ -60,6 +60,8 @@ def get_config() -> Dict[str, Any]:
         ('OPENAI_MODEL_PIN', None),
         ('XAI_MODEL_POLICY', 'latest'),
         ('XAI_MODEL_PIN', None),
+        ('DATAFORSEO_LOGIN', None),
+        ('DATAFORSEO_PASSWORD', None),
     ]
 
     config = {}
@@ -219,6 +221,11 @@ def get_x_source(config: Dict[str, Any]) -> Optional[str]:
         return 'xai'
 
     return None
+
+
+def has_dataforseo(config: Dict[str, Any]) -> bool:
+    """Check if DataForSEO credentials are configured."""
+    return bool(config.get('DATAFORSEO_LOGIN') and config.get('DATAFORSEO_PASSWORD'))
 
 
 def is_ytdlp_available() -> bool:
