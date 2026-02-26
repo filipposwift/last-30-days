@@ -11,8 +11,14 @@ metadata:
     requires:
       env:
         - OPENAI_API_KEY
+        - XAI_API_KEY
+      optionalEnv:
+        - BRAVE_API_KEY
+        - PARALLEL_API_KEY
+        - OPENROUTER_API_KEY
+        - DATAFORSEO_LOGIN
+        - DATAFORSEO_PASSWORD
       bins:
-        - node
         - python3
     primaryEnv: OPENAI_API_KEY
     files:
@@ -502,7 +508,7 @@ Want another prompt? Just tell me what you're creating next.
 **What this skill does:**
 
 - Sends search queries to OpenAI's Responses API (`api.openai.com`) for Reddit discovery
-- Sends search queries to Twitter's GraphQL API (via browser cookie auth) or xAI's API (`api.x.ai`) for X search
+- Sends search queries to xAI's API (`api.x.ai`) for X search
 - Runs `yt-dlp` locally for YouTube search and transcript extraction (no API key, public data)
 - Optionally sends search queries to Brave Search API, Parallel AI API, or OpenRouter API for web search
 - Optionally sends search queries to DataForSEO API (`api.dataforseo.com`) for Google AI Overview
