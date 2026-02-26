@@ -18,8 +18,11 @@ metadata:
         - OPENROUTER_API_KEY
         - DATAFORSEO_LOGIN
         - DATAFORSEO_PASSWORD
+        - YOUTUBE_API_KEY
       bins:
         - python3
+      pips:
+        - youtube-transcript-api
     primaryEnv: OPENAI_API_KEY
     files:
       - 'scripts/*'
@@ -321,7 +324,7 @@ KEY PATTERNS from the research:
 ```
 
 If Reddit returned 0 threads, write: "├─ 🟠 Reddit: 0 threads (no results this cycle)"
-If YouTube returned 0 videos or yt-dlp is not installed, omit the YouTube line entirely.
+If YouTube returned 0 videos or YOUTUBE_API_KEY is not set, omit the YouTube line entirely.
 NEVER use plain text dashes (-) or pipe (|). ALWAYS use ├─ └─ │ and the emoji.
 
 **SELF-CHECK before displaying**: Re-read your "What I learned" section. Does it match what the research ACTUALLY says? If you catch yourself projecting your own knowledge instead of the research, rewrite it.
@@ -509,7 +512,8 @@ Want another prompt? Just tell me what you're creating next.
 
 - Sends search queries to OpenAI's Responses API (`api.openai.com`) for Reddit discovery
 - Sends search queries to xAI's API (`api.x.ai`) for X search
-- Runs `yt-dlp` locally for YouTube search and transcript extraction (no API key, public data)
+- Sends search queries to YouTube Data API v3 (`googleapis.com`) for video discovery (read-only, requires YOUTUBE_API_KEY)
+- Uses `youtube-transcript-api` (pip) to fetch public video transcripts (no auth needed)
 - Optionally sends search queries to Brave Search API, Parallel AI API, or OpenRouter API for web search
 - Optionally sends search queries to DataForSEO API (`api.dataforseo.com`) for Google AI Overview
 - Fetches public Reddit thread data from `reddit.com` for engagement metrics

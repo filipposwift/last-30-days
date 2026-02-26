@@ -1,23 +1,18 @@
-"""YouTube search and transcript extraction via yt-dlp for /last-30-days.
+"""YouTube search and transcript extraction via YouTube Data API v3 + youtube-transcript-api.
 
-Uses yt-dlp (https://github.com/yt-dlp/yt-dlp) for both YouTube search and
-transcript extraction. No API keys needed — just have yt-dlp installed.
-
-Inspired by Peter Steinberger's toolchain approach (yt-dlp + summarize CLI).
+Uses:
+- YouTube Data API v3 for search and video statistics (requires YOUTUBE_API_KEY)
+- youtube-transcript-api (pip) for transcript extraction (no auth needed)
 """
 
-import json
 import math
-import os
 import re
-import signal
-import shutil
-import subprocess
 import sys
-import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
+from urllib.parse import urlencode
+from urllib.request import urlopen, Request
+import json
 
 # Depth configurations: how many videos to search / transcribe
 DEPTH_CONFIG = {
@@ -35,29 +30,13 @@ TRANSCRIPT_LIMITS = {
 # Max words to keep from each transcript
 TRANSCRIPT_MAX_WORDS = 500
 
+_API_BASE = "https://www.googleapis.com/youtube/v3"
+
 
 def _log(msg: str):
     """Log to stderr."""
     sys.stderr.write(f"[YouTube] {msg}\n")
     sys.stderr.flush()
-
-
-def _cookies_args() -> List[str]:
-    """Return yt-dlp cookies args if a cookies file exists.
-
-    Looks for youtube_cookies.txt in the skill root directory.
-    """
-    # Check skill root (next to scripts/)
-    skill_root = Path(__file__).parent.parent.parent
-    cookies_path = skill_root / "youtube_cookies.txt"
-    if cookies_path.exists():
-        return ["--cookies", str(cookies_path)]
-    return []
-
-
-def is_ytdlp_installed() -> bool:
-    """Check if yt-dlp is available in PATH."""
-    return shutil.which("yt-dlp") is not None
 
 
 def _extract_core_subject(topic: str) -> str:
@@ -98,106 +77,126 @@ def _extract_core_subject(topic: str) -> str:
     return result.rstrip('?!.')
 
 
+def _api_get(endpoint: str, params: dict) -> dict:
+    """Make a GET request to YouTube Data API v3."""
+    url = f"{_API_BASE}/{endpoint}?{urlencode(params)}"
+    req = Request(url, headers={"Accept": "application/json"})
+    with urlopen(req, timeout=15) as resp:
+        return json.loads(resp.read().decode())
+
+
 def search_youtube(
     topic: str,
     from_date: str,
     to_date: str,
     depth: str = "default",
+    api_key: str = "",
 ) -> Dict[str, Any]:
-    """Search YouTube via yt-dlp. No API key needed.
+    """Search YouTube via Data API v3.
 
     Args:
         topic: Search topic
         from_date: Start date (YYYY-MM-DD)
         to_date: End date (YYYY-MM-DD)
         depth: 'quick', 'default', or 'deep'
+        api_key: YouTube Data API v3 key
 
     Returns:
         Dict with 'items' list of video metadata dicts.
     """
-    if not is_ytdlp_installed():
-        return {"items": [], "error": "yt-dlp not installed"}
+    if not api_key:
+        return {"items": [], "error": "YOUTUBE_API_KEY not set"}
 
     count = DEPTH_CONFIG.get(depth, DEPTH_CONFIG["default"])
     core_topic = _extract_core_subject(topic)
 
     _log(f"Searching YouTube for '{core_topic}' (since {from_date}, count={count})")
 
-    # yt-dlp search with full metadata (no --flat-playlist so dates are real).
-    # No --dateafter — we filter by date in Python with a soft fallback,
-    # because YouTube search returns relevance-sorted results and strict date
-    # filtering returns 0 for evergreen topics like "thumbnail tips".
-    cmd = [
-        "yt-dlp",
-        *_cookies_args(),
-        f"ytsearch{count}:{core_topic}",
-        "--dump-json",
-        "--no-warnings",
-        "--no-download",
-    ]
+    # search.list — find video IDs (100 quota units per call, max 50 results)
+    # We may need multiple pages for deep mode (40 results = 1 call)
+    all_video_ids = []
+    all_snippets = {}  # video_id -> snippet data
+    page_token = None
+    remaining = count
 
-    preexec = os.setsid if hasattr(os, 'setsid') else None
+    while remaining > 0:
+        max_results = min(remaining, 50)
+        params = {
+            "part": "snippet",
+            "type": "video",
+            "q": core_topic,
+            "publishedAfter": f"{from_date}T00:00:00Z",
+            "maxResults": max_results,
+            "order": "relevance",
+            "key": api_key,
+        }
+        if page_token:
+            params["pageToken"] = page_token
 
-    try:
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            preexec_fn=preexec,
-        )
         try:
-            stdout, stderr = proc.communicate(timeout=120)
-        except subprocess.TimeoutExpired:
-            try:
-                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-            except (ProcessLookupError, PermissionError, OSError):
-                proc.kill()
-            proc.wait(timeout=5)
-            _log("YouTube search timed out (120s)")
-            return {"items": [], "error": "Search timed out"}
-    except FileNotFoundError:
-        return {"items": [], "error": "yt-dlp not found"}
+            data = _api_get("search", params)
+        except Exception as e:
+            _log(f"Search API error: {e}")
+            return {"items": [], "error": f"YouTube API error: {e}"}
 
-    if not (stdout or "").strip():
+        for item in data.get("items", []):
+            vid = item.get("id", {}).get("videoId")
+            if vid:
+                all_video_ids.append(vid)
+                all_snippets[vid] = item.get("snippet", {})
+
+        page_token = data.get("nextPageToken")
+        remaining -= max_results
+        if not page_token:
+            break
+
+    if not all_video_ids:
         _log("YouTube search returned 0 results")
         return {"items": []}
 
-    # Parse JSON-per-line output
-    items = []
-    for line in stdout.strip().split("\n"):
-        line = line.strip()
-        if not line:
-            continue
+    # videos.list — get statistics in batch (1 quota unit per call, up to 50 IDs)
+    stats = {}
+    for i in range(0, len(all_video_ids), 50):
+        batch = all_video_ids[i:i+50]
         try:
-            video = json.loads(line)
-        except json.JSONDecodeError:
-            continue
+            vdata = _api_get("videos", {
+                "part": "statistics,contentDetails",
+                "id": ",".join(batch),
+                "key": api_key,
+            })
+            for v in vdata.get("items", []):
+                s = v.get("statistics", {})
+                stats[v["id"]] = {
+                    "views": int(s.get("viewCount", 0)),
+                    "likes": int(s.get("likeCount", 0)),
+                    "comments": int(s.get("commentCount", 0)),
+                }
+        except Exception as e:
+            _log(f"Videos API error: {e}")
 
-        video_id = video.get("id", "")
-        view_count = video.get("view_count") or 0
-        like_count = video.get("like_count") or 0
-        comment_count = video.get("comment_count") or 0
-        upload_date = video.get("upload_date", "")  # YYYYMMDD
+    # Build items list
+    items = []
+    for vid in all_video_ids:
+        snippet = all_snippets.get(vid, {})
+        st = stats.get(vid, {"views": 0, "likes": 0, "comments": 0})
 
-        # Convert YYYYMMDD to YYYY-MM-DD
-        date_str = None
-        if upload_date and len(upload_date) == 8:
-            date_str = f"{upload_date[:4]}-{upload_date[4:6]}-{upload_date[6:8]}"
+        # Parse date from snippet.publishedAt (ISO 8601)
+        published = snippet.get("publishedAt", "")
+        date_str = published[:10] if len(published) >= 10 else None
 
         items.append({
-            "video_id": video_id,
-            "title": video.get("title", ""),
-            "url": f"https://www.youtube.com/watch?v={video_id}",
-            "channel_name": video.get("channel", video.get("uploader", "")),
+            "video_id": vid,
+            "title": snippet.get("title", ""),
+            "url": f"https://www.youtube.com/watch?v={vid}",
+            "channel_name": snippet.get("channelTitle", ""),
             "date": date_str,
             "engagement": {
-                "views": view_count,
-                "likes": like_count,
-                "comments": comment_count,
+                "views": st["views"],
+                "likes": st["likes"],
+                "comments": st["comments"],
             },
-            "duration": video.get("duration"),
-            "relevance": 0.7,  # Default; no LLM relevance scoring for YouTube
+            "duration": None,
+            "relevance": 0.7,
             "why_relevant": f"YouTube video about {core_topic}",
         })
 
@@ -215,95 +214,40 @@ def search_youtube(
     return {"items": items}
 
 
-def _clean_vtt(vtt_text: str) -> str:
-    """Convert VTT subtitle format to clean plaintext."""
-    # Strip VTT header
-    text = re.sub(r'^WEBVTT.*?\n\n', '', vtt_text, flags=re.DOTALL)
-    # Strip timestamps
-    text = re.sub(r'\d{2}:\d{2}:\d{2}\.\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}\.\d{3}.*\n', '', text)
-    # Strip position/alignment tags
-    text = re.sub(r'<[^>]+>', '', text)
-    # Strip cue numbers
-    text = re.sub(r'^\d+\s*$', '', text, flags=re.MULTILINE)
-    # Deduplicate overlapping lines
-    lines = text.strip().split('\n')
-    seen = set()
-    unique = []
-    for line in lines:
-        stripped = line.strip()
-        if stripped and stripped not in seen:
-            seen.add(stripped)
-            unique.append(stripped)
-    return re.sub(r'\s+', ' ', ' '.join(unique)).strip()
-
-
-def fetch_transcript(video_id: str, temp_dir: str) -> Optional[str]:
-    """Fetch auto-generated transcript for a YouTube video.
+def fetch_transcript(video_id: str) -> Optional[str]:
+    """Fetch transcript for a YouTube video using youtube-transcript-api.
 
     Args:
         video_id: YouTube video ID
-        temp_dir: Temporary directory for subtitle files
 
     Returns:
         Plaintext transcript string, or None if no captions available.
     """
-    cmd = [
-        "yt-dlp",
-        *_cookies_args(),
-        "--write-auto-subs",
-        "--sub-lang", "en",
-        "--sub-format", "vtt",
-        "--skip-download",
-        "--no-warnings",
-        "-o", f"{temp_dir}/%(id)s",
-        f"https://www.youtube.com/watch?v={video_id}",
-    ]
-
-    preexec = os.setsid if hasattr(os, 'setsid') else None
+    try:
+        from youtube_transcript_api import YouTubeTranscriptApi
+    except ImportError:
+        _log("youtube-transcript-api not installed")
+        return None
 
     try:
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            preexec_fn=preexec,
-        )
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en'])
+    except Exception:
+        # Fallback: try any available language
         try:
-            proc.communicate(timeout=30)
-        except subprocess.TimeoutExpired:
-            try:
-                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-            except (ProcessLookupError, PermissionError, OSError):
-                proc.kill()
-            proc.wait(timeout=5)
-            return None
-    except FileNotFoundError:
-        return None
-
-    # yt-dlp may save as .en.vtt or .en-orig.vtt
-    vtt_path = Path(temp_dir) / f"{video_id}.en.vtt"
-    if not vtt_path.exists():
-        # Try alternate naming
-        for p in Path(temp_dir).glob(f"{video_id}*.vtt"):
-            vtt_path = p
-            break
-        else:
+            transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+        except Exception:
             return None
 
-    try:
-        raw = vtt_path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return None
-
-    transcript = _clean_vtt(raw)
+    text = ' '.join(entry['text'] for entry in transcript_list)
+    # Clean up whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
 
     # Truncate to max words
-    words = transcript.split()
+    words = text.split()
     if len(words) > TRANSCRIPT_MAX_WORDS:
-        transcript = ' '.join(words[:TRANSCRIPT_MAX_WORDS]) + '...'
+        text = ' '.join(words[:TRANSCRIPT_MAX_WORDS]) + '...'
 
-    return transcript if transcript else None
+    return text if text else None
 
 
 def fetch_transcripts_parallel(
@@ -325,18 +269,17 @@ def fetch_transcripts_parallel(
     _log(f"Fetching transcripts for {len(video_ids)} videos")
 
     results = {}
-    with tempfile.TemporaryDirectory() as temp_dir:
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {
-                executor.submit(fetch_transcript, vid, temp_dir): vid
-                for vid in video_ids
-            }
-            for future in as_completed(futures):
-                vid = futures[future]
-                try:
-                    results[vid] = future.result()
-                except Exception:
-                    results[vid] = None
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(fetch_transcript, vid): vid
+            for vid in video_ids
+        }
+        for future in as_completed(futures):
+            vid = futures[future]
+            try:
+                results[vid] = future.result()
+            except Exception:
+                results[vid] = None
 
     got = sum(1 for v in results.values() if v)
     _log(f"Got transcripts for {got}/{len(video_ids)} videos")
@@ -348,6 +291,7 @@ def search_and_transcribe(
     from_date: str,
     to_date: str,
     depth: str = "default",
+    api_key: str = "",
 ) -> Dict[str, Any]:
     """Full YouTube search: find videos, then fetch transcripts for top results.
 
@@ -356,12 +300,13 @@ def search_and_transcribe(
         from_date: Start date (YYYY-MM-DD)
         to_date: End date (YYYY-MM-DD)
         depth: 'quick', 'default', or 'deep'
+        api_key: YouTube Data API v3 key
 
     Returns:
         Dict with 'items' list. Each item has a 'transcript_snippet' field.
     """
     # Step 1: Search
-    search_result = search_youtube(topic, from_date, to_date, depth)
+    search_result = search_youtube(topic, from_date, to_date, depth, api_key=api_key)
     items = search_result.get("items", [])
 
     if not items:

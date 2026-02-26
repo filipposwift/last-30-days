@@ -255,8 +255,9 @@ def _search_youtube(
     from_date: str,
     to_date: str,
     depth: str,
+    api_key: str = "",
 ) -> tuple:
-    """Search YouTube via yt-dlp (runs in thread).
+    """Search YouTube via YouTube Data API v3 (runs in thread).
 
     Returns:
         Tuple of (youtube_items, youtube_error)
@@ -265,7 +266,7 @@ def _search_youtube(
 
     try:
         response = youtube_yt.search_and_transcribe(
-            topic, from_date, to_date, depth=depth,
+            topic, from_date, to_date, depth=depth, api_key=api_key,
         )
     except Exception as e:
         return [], f"{type(e).__name__}: {e}"
@@ -556,12 +557,12 @@ def run_research(
             if progress:
                 progress.start_web_only()
                 progress.end_web_only()
-        # Still run YouTube in web-only mode if yt-dlp is available
+        # Still run YouTube in web-only mode if API key is available
         if run_youtube:
             if progress:
                 progress.start_youtube()
             try:
-                youtube_items, youtube_error = _search_youtube(topic, from_date, to_date, depth)
+                youtube_items, youtube_error = _search_youtube(topic, from_date, to_date, depth, api_key=config.get("YOUTUBE_API_KEY", ""))
                 if youtube_error and progress:
                     progress.show_error(f"YouTube error: {youtube_error}")
             except Exception as e:
@@ -606,7 +607,7 @@ def run_research(
             if progress:
                 progress.start_youtube()
             youtube_future = executor.submit(
-                _search_youtube, topic, from_date, to_date, depth
+                _search_youtube, topic, from_date, to_date, depth, api_key=config.get("YOUTUBE_API_KEY", "")
             )
 
         if web_backend:
@@ -894,8 +895,8 @@ def main():
     x_source_status = env.get_x_source_status(config)
     x_source = x_source_status["source"]  # 'xai' or None
 
-    # Auto-detect yt-dlp for YouTube search
-    has_ytdlp = env.is_ytdlp_available()
+    # Check YouTube Data API key
+    has_youtube = env.has_youtube_api(config)
 
     # --diagnose: show source availability and exit
     if args.diagnose:
@@ -904,7 +905,7 @@ def main():
             "openai": bool(config.get("OPENAI_API_KEY")),
             "xai": bool(config.get("XAI_API_KEY")),
             "x_source": x_source_status["source"],
-            "youtube": has_ytdlp,
+            "youtube": has_youtube,
             "web_search_backend": web_source,
             "parallel_ai": bool(config.get("PARALLEL_API_KEY")),
             "brave": bool(config.get("BRAVE_API_KEY")),
@@ -929,7 +930,7 @@ def main():
         "openai": bool(config.get("OPENAI_API_KEY")),
         "xai": bool(config.get("XAI_API_KEY")),
         "x_source": x_source_status["source"],
-        "youtube": has_ytdlp,
+        "youtube": has_youtube,
         "web_search_backend": web_source,
         "dataforseo": env.has_dataforseo(config),
     }
@@ -1011,7 +1012,7 @@ def main():
         args.mock,
         progress,
         x_source=x_source or "xai",
-        run_youtube=has_ytdlp,
+        run_youtube=has_youtube,
         timeouts=timeouts,
     )
 
@@ -1098,8 +1099,8 @@ def main():
         source_info["reddit_skip_reason"] = "No OPENAI_API_KEY (add to ~/.config/last30days/.env)"
     if not x_source:
         source_info["x_skip_reason"] = "No XAI_API_KEY (add to ~/.config/last30days/.env)"
-    if not has_ytdlp:
-        source_info["youtube_skip_reason"] = "yt-dlp not installed — fix: brew install yt-dlp"
+    if not has_youtube:
+        source_info["youtube_skip_reason"] = "YOUTUBE_API_KEY not set (add to ~/.config/last30days/.env)"
     if not env.has_dataforseo(config):
         source_info["dataforseo_skip_reason"] = "No DATAFORSEO_LOGIN (add to ~/.config/last30days/.env)"
     elif dataforseo_error:

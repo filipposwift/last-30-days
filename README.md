@@ -20,15 +20,15 @@ Research any topic across Reddit, X, YouTube, and the web from the last 30 days.
 |---------|-------------|----------|
 | Reddit (OpenAI Responses API) | `OPENAI_API_KEY` | Yes |
 | X (xAI API) | `XAI_API_KEY` | Yes |
-| YouTube (yt-dlp) | — | No, but recommended (`brew install yt-dlp`) |
+| YouTube (Data API v3) | `YOUTUBE_API_KEY` | No |
 | Web search (Brave) | `BRAVE_API_KEY` | No |
 | Web search (Parallel AI) | `PARALLEL_API_KEY` | No |
 | Web search (OpenRouter) | `OPENROUTER_API_KEY` | No |
 | Google AI Overview (DataForSEO) | `DATAFORSEO_LOGIN` + `DATAFORSEO_PASSWORD` | No |
 
-**Minimum:** `OPENAI_API_KEY` + `XAI_API_KEY` gives you Reddit + X. YouTube activates automatically when `yt-dlp` is in PATH.
+**Minimum:** `OPENAI_API_KEY` + `XAI_API_KEY` gives you Reddit + X. YouTube activates when `YOUTUBE_API_KEY` is set.
 
-**Runtime:** Python 3, Node.js 22+.
+**Runtime:** Python 3 + `pip install youtube-transcript-api`.
 
 ## Installation
 
@@ -61,7 +61,7 @@ python3 scripts/last30days.py --diagnose
 
 ## How It Works
 
-1. **Phase 1 — Discovery:** Searches Reddit (OpenAI API), X (xAI API), YouTube (yt-dlp), web
+1. **Phase 1 — Discovery:** Searches Reddit (OpenAI API), X (xAI API), YouTube (Data API v3), web
 2. **Phase 2 — Supplemental:** Extracts @handles and r/subreddits from Phase 1, runs targeted follow-ups
 3. **Enrichment:** Fetches real Reddit metrics (upvotes, comments) via public JSON
 4. **Scoring:** Relevance 45%, recency 25%, engagement 30%
@@ -167,7 +167,8 @@ When the user asked "how do I build a review loop workflow", the skill generated
 | `api.openai.com` | Search query |
 | `api.x.ai` | Search query |
 | `reddit.com` | Thread URLs (public JSON) |
-| `youtube.com` (via yt-dlp) | Search query |
+| `googleapis.com` (YouTube Data API v3) | Search query |
+| `youtube.com` (youtube-transcript-api) | Video ID (transcript fetch) |
 | Optional web APIs (Brave/Parallel/OpenRouter) | Search query |
 | DataForSEO (`api.dataforseo.com`) | Search query |
 

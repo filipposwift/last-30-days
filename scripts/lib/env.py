@@ -62,6 +62,7 @@ def get_config() -> Dict[str, Any]:
         ('XAI_MODEL_PIN', None),
         ('DATAFORSEO_LOGIN', None),
         ('DATAFORSEO_PASSWORD', None),
+        ('YOUTUBE_API_KEY', None),
     ]
 
     config = {}
@@ -228,10 +229,9 @@ def has_dataforseo(config: Dict[str, Any]) -> bool:
     return bool(config.get('DATAFORSEO_LOGIN') and config.get('DATAFORSEO_PASSWORD'))
 
 
-def is_ytdlp_available() -> bool:
-    """Check if yt-dlp is installed for YouTube search."""
-    from . import youtube_yt
-    return youtube_yt.is_ytdlp_installed()
+def has_youtube_api(config: Dict[str, Any]) -> bool:
+    """Check if YouTube Data API v3 key is configured."""
+    return bool(config.get('YOUTUBE_API_KEY'))
 
 
 def get_x_source_status(config: Dict[str, Any]) -> Dict[str, Any]:
