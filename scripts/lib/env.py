@@ -63,6 +63,7 @@ def get_config() -> Dict[str, Any]:
         ('DATAFORSEO_LOGIN', None),
         ('DATAFORSEO_PASSWORD', None),
         ('YOUTUBE_API_KEY', None),
+        ('SUPADATA_API_KEY', None),
     ]
 
     config = {}
@@ -232,6 +233,11 @@ def has_dataforseo(config: Dict[str, Any]) -> bool:
 def has_youtube_api(config: Dict[str, Any]) -> bool:
     """Check if YouTube Data API v3 key is configured."""
     return bool(config.get('YOUTUBE_API_KEY'))
+
+
+def has_supadata(config: Dict[str, Any]) -> bool:
+    """Check if Supadata API key is configured."""
+    return bool(config.get('SUPADATA_API_KEY'))
 
 
 def get_x_source_status(config: Dict[str, Any]) -> Dict[str, Any]:

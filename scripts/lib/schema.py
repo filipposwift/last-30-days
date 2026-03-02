@@ -122,13 +122,15 @@ class XItem:
     date: Optional[str] = None
     date_confidence: str = "low"
     engagement: Optional[Engagement] = None
+    has_video: bool = False
+    transcript_snippet: str = ""
     relevance: float = 0.5
     why_relevant: str = ""
     subs: SubScores = field(default_factory=SubScores)
     score: int = 0
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d = {
             'id': self.id,
             'text': self.text,
             'url': self.url,
@@ -136,11 +138,15 @@ class XItem:
             'date': self.date,
             'date_confidence': self.date_confidence,
             'engagement': self.engagement.to_dict() if self.engagement else None,
+            'has_video': self.has_video,
             'relevance': self.relevance,
             'why_relevant': self.why_relevant,
             'subs': self.subs.to_dict(),
             'score': self.score,
         }
+        if self.transcript_snippet:
+            d['transcript_snippet'] = self.transcript_snippet
+        return d
 
 
 @dataclass
@@ -317,6 +323,8 @@ class Report:
                 date=x.get('date'),
                 date_confidence=x.get('date_confidence', 'low'),
                 engagement=eng,
+                has_video=x.get('has_video', False),
+                transcript_snippet=x.get('transcript_snippet', ''),
                 relevance=x.get('relevance', 0.5),
                 why_relevant=x.get('why_relevant', ''),
                 subs=subs,

@@ -41,6 +41,7 @@ IMPORTANT: Return ONLY valid JSON in this exact format, no other text:
         "replies": 15,
         "quotes": 5
       }},
+      "has_video": false,
       "why_relevant": "Brief explanation of relevance",
       "relevance": 0.85
     }}
@@ -51,6 +52,7 @@ Rules:
 - relevance is 0.0 to 1.0 (1.0 = highly relevant)
 - date must be YYYY-MM-DD format or null
 - engagement can be null if unknown
+- has_video: true if the post contains a video attachment
 - Include diverse voices/accounts if applicable
 - Prefer posts with substantive content, not just links"""
 
@@ -203,6 +205,7 @@ def parse_x_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
             "author_handle": str(item.get("author_handle", "")).strip().lstrip("@"),
             "date": item.get("date"),
             "engagement": engagement,
+            "has_video": bool(item.get("has_video", False)),
             "why_relevant": str(item.get("why_relevant", "")).strip(),
             "relevance": min(1.0, max(0.0, float(item.get("relevance", 0.5)))),
         }

@@ -148,6 +148,8 @@ def normalize_x_items(
             date=date_str,
             date_confidence=date_confidence,
             engagement=engagement,
+            has_video=bool(item.get("has_video", False)),
+            transcript_snippet=item.get("transcript_snippet", ""),
             relevance=item.get("relevance", 0.5),
             why_relevant=item.get("why_relevant", ""),
         ))

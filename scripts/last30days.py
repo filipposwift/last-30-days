@@ -110,6 +110,7 @@ from lib import (
     score,
     ui,
     websearch,
+    supadata,
     xai_x,
     youtube_yt,
 )
@@ -256,6 +257,7 @@ def _search_youtube(
     to_date: str,
     depth: str,
     api_key: str = "",
+    supadata_api_key: str = "",
 ) -> tuple:
     """Search YouTube via YouTube Data API v3 (runs in thread).
 
@@ -267,6 +269,7 @@ def _search_youtube(
     try:
         response = youtube_yt.search_and_transcribe(
             topic, from_date, to_date, depth=depth, api_key=api_key,
+            supadata_api_key=supadata_api_key,
         )
     except Exception as e:
         return [], f"{type(e).__name__}: {e}"
@@ -277,6 +280,42 @@ def _search_youtube(
         youtube_error = response["error"]
 
     return youtube_items, youtube_error
+
+
+def _enrich_x_video_transcripts(
+    x_items: list,
+    supadata_api_key: str,
+    max_videos: int = 5,
+) -> None:
+    """Enrich X items that have videos with transcripts via Supadata.
+
+    Modifies items in-place by adding 'transcript_snippet' to items with has_video=True.
+
+    Args:
+        x_items: List of raw X item dicts
+        supadata_api_key: Supadata API key
+        max_videos: Max videos to transcribe
+    """
+    if not supadata_api_key or not x_items:
+        return
+
+    video_items = [item for item in x_items if item.get("has_video")]
+    if not video_items:
+        return
+
+    # Limit to max_videos
+    video_items = video_items[:max_videos]
+    urls = [item["url"] for item in video_items]
+
+    sys.stderr.write(f"[Supadata] Enriching {len(urls)} X video posts with transcripts\n")
+    sys.stderr.flush()
+
+    transcripts = supadata.fetch_transcripts_batch(urls, supadata_api_key, max_workers=3)
+
+    for item in video_items:
+        transcript = transcripts.get(item["url"])
+        if transcript:
+            item["transcript_snippet"] = transcript
 
 
 def _search_web(
@@ -562,7 +601,7 @@ def run_research(
             if progress:
                 progress.start_youtube()
             try:
-                youtube_items, youtube_error = _search_youtube(topic, from_date, to_date, depth, api_key=config.get("YOUTUBE_API_KEY", ""))
+                youtube_items, youtube_error = _search_youtube(topic, from_date, to_date, depth, api_key=config.get("YOUTUBE_API_KEY", ""), supadata_api_key=config.get("SUPADATA_API_KEY", ""))
                 if youtube_error and progress:
                     progress.show_error(f"YouTube error: {youtube_error}")
             except Exception as e:
@@ -607,7 +646,7 @@ def run_research(
             if progress:
                 progress.start_youtube()
             youtube_future = executor.submit(
-                _search_youtube, topic, from_date, to_date, depth, api_key=config.get("YOUTUBE_API_KEY", "")
+                _search_youtube, topic, from_date, to_date, depth, api_key=config.get("YOUTUBE_API_KEY", ""), supadata_api_key=config.get("SUPADATA_API_KEY", "")
             )
 
         if web_backend:
@@ -791,6 +830,12 @@ def run_research(
             reddit_items.extend(sup_reddit)
         if sup_x:
             x_items.extend(sup_x)
+
+    # Enrich X video posts with transcripts via Supadata
+    supadata_key = config.get("SUPADATA_API_KEY", "")
+    if supadata_key and x_items:
+        max_vids = 3 if depth == "quick" else 5
+        _enrich_x_video_transcripts(x_items, supadata_key, max_videos=max_vids)
 
     return reddit_items, x_items, youtube_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, web_error, ai_overview, dataforseo_error
 

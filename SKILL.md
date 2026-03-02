@@ -19,6 +19,7 @@ metadata:
         - DATAFORSEO_LOGIN
         - DATAFORSEO_PASSWORD
         - YOUTUBE_API_KEY
+        - SUPADATA_API_KEY
       bins:
         - python3
         - uv
@@ -513,6 +514,7 @@ Want another prompt? Just tell me what you're creating next.
 - Sends search queries to xAI's API (`api.x.ai`) for X search
 - Sends search queries to YouTube Data API v3 (`googleapis.com`) for video discovery (read-only, requires YOUTUBE_API_KEY)
 - Uses `youtube-transcript-api` (pip) to fetch public video transcripts (no auth needed)
+- Optionally sends video URLs to Supadata API (`api.supadata.ai`) for transcript fallback when captions are unavailable and for X/Twitter video transcripts (requires SUPADATA_API_KEY)
 - Optionally sends search queries to Brave Search API, Parallel AI API, or OpenRouter API for web search
 - Optionally sends search queries to DataForSEO API (`api.dataforseo.com`) for Google AI Overview
 - Fetches public Reddit thread data from `reddit.com` for engagement metrics

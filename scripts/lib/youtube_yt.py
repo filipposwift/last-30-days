@@ -214,51 +214,72 @@ def search_youtube(
     return {"items": items}
 
 
-def fetch_transcript(video_id: str) -> Optional[str]:
+def fetch_transcript(video_id: str, supadata_api_key: str = "") -> Optional[str]:
     """Fetch transcript for a YouTube video using youtube-transcript-api.
+
+    Falls back to Supadata API if youtube-transcript-api returns no captions
+    and a Supadata API key is provided.
 
     Args:
         video_id: YouTube video ID
+        supadata_api_key: Optional Supadata API key for fallback
 
     Returns:
         Plaintext transcript string, or None if no captions available.
     """
+    text = None
+
     try:
         from youtube_transcript_api import YouTubeTranscriptApi
     except ImportError:
         _log("youtube-transcript-api not installed")
-        return None
-
-    try:
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en'])
-    except Exception:
-        # Fallback: try any available language
+        # Skip to Supadata fallback below
+        text = None
+    else:
         try:
-            transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en'])
         except Exception:
-            return None
+            # Fallback: try any available language
+            try:
+                transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+            except Exception:
+                transcript_list = None
 
-    text = ' '.join(entry['text'] for entry in transcript_list)
-    # Clean up whitespace
-    text = re.sub(r'\s+', ' ', text).strip()
+        if transcript_list:
+            text = ' '.join(entry['text'] for entry in transcript_list)
+            # Clean up whitespace
+            text = re.sub(r'\s+', ' ', text).strip()
 
-    # Truncate to max words
-    words = text.split()
-    if len(words) > TRANSCRIPT_MAX_WORDS:
-        text = ' '.join(words[:TRANSCRIPT_MAX_WORDS]) + '...'
+            # Truncate to max words
+            words = text.split()
+            if len(words) > TRANSCRIPT_MAX_WORDS:
+                text = ' '.join(words[:TRANSCRIPT_MAX_WORDS]) + '...'
 
-    return text if text else None
+            text = text if text else None
+
+    # Supadata fallback: if no transcript from youtube-transcript-api
+    if text is None and supadata_api_key:
+        try:
+            from . import supadata
+            video_url = f"https://www.youtube.com/watch?v={video_id}"
+            text = supadata.fetch_transcript(video_url, supadata_api_key)
+        except Exception as e:
+            _log(f"Supadata fallback error for {video_id}: {e}")
+
+    return text
 
 
 def fetch_transcripts_parallel(
     video_ids: List[str],
     max_workers: int = 5,
+    supadata_api_key: str = "",
 ) -> Dict[str, Optional[str]]:
     """Fetch transcripts for multiple videos in parallel.
 
     Args:
         video_ids: List of YouTube video IDs
         max_workers: Max parallel fetches
+        supadata_api_key: Optional Supadata API key for fallback
 
     Returns:
         Dict mapping video_id to transcript text (or None).
@@ -271,7 +292,7 @@ def fetch_transcripts_parallel(
     results = {}
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(fetch_transcript, vid): vid
+            executor.submit(fetch_transcript, vid, supadata_api_key=supadata_api_key): vid
             for vid in video_ids
         }
         for future in as_completed(futures):
@@ -292,6 +313,7 @@ def search_and_transcribe(
     to_date: str,
     depth: str = "default",
     api_key: str = "",
+    supadata_api_key: str = "",
 ) -> Dict[str, Any]:
     """Full YouTube search: find videos, then fetch transcripts for top results.
 
@@ -301,6 +323,7 @@ def search_and_transcribe(
         to_date: End date (YYYY-MM-DD)
         depth: 'quick', 'default', or 'deep'
         api_key: YouTube Data API v3 key
+        supadata_api_key: Optional Supadata API key for transcript fallback
 
     Returns:
         Dict with 'items' list. Each item has a 'transcript_snippet' field.
@@ -315,7 +338,7 @@ def search_and_transcribe(
     # Step 2: Fetch transcripts for top N by views
     transcript_limit = TRANSCRIPT_LIMITS.get(depth, TRANSCRIPT_LIMITS["default"])
     top_ids = [item["video_id"] for item in items[:transcript_limit]]
-    transcripts = fetch_transcripts_parallel(top_ids)
+    transcripts = fetch_transcripts_parallel(top_ids, supadata_api_key=supadata_api_key)
 
     # Step 3: Attach transcripts to items
     for item in items:
