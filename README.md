@@ -23,6 +23,7 @@ Research any topic across Reddit, X, YouTube, and the web from the last 30 days.
 | YouTube (Data API v3) | `YOUTUBE_API_KEY` | No |
 | Web search (Parallel AI) | `PARALLEL_API_KEY` | No (recommended) |
 | Web search (OpenRouter) | `OPENROUTER_API_KEY` | No |
+| Transcript fallback (Supadata) | `SUPADATA_API_KEY` | No |
 | Google AI Overview (DataForSEO) | `DATAFORSEO_LOGIN` + `DATAFORSEO_PASSWORD` | No |
 
 **Minimum:** `OPENAI_API_KEY` + `XAI_API_KEY` gives you Reddit + X. YouTube activates when `YOUTUBE_API_KEY` is set.
