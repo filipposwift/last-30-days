@@ -324,16 +324,17 @@ def _search_web(
     from_date: str,
     to_date: str,
     depth: str,
+    query_type: str = "general",
 ) -> tuple:
     """Search the web via native API backend (runs in thread).
 
-    Uses the best available backend: Parallel AI > Brave > OpenRouter.
+    Uses the best available backend: Parallel AI > OpenRouter.
 
     Returns:
         Tuple of (web_items, web_error)
         web_items are raw dicts ready for websearch.normalize_websearch_items()
     """
-    from lib import brave_search, parallel_search, openrouter_search
+    from lib import parallel_search, openrouter_search
 
     backend = env.get_web_search_source(config)
     if not backend:
@@ -345,11 +346,8 @@ def _search_web(
     try:
         if backend == "parallel":
             raw_results = parallel_search.search_web(
-                topic, from_date, to_date, config["PARALLEL_API_KEY"], depth=depth,
-            )
-        elif backend == "brave":
-            raw_results = brave_search.search_web(
-                topic, from_date, to_date, config["BRAVE_API_KEY"], depth=depth,
+                topic, from_date, to_date, config["PARALLEL_API_KEY"],
+                depth=depth, query_type=query_type,
             )
         elif backend == "openrouter":
             raw_results = openrouter_search.search_web(
@@ -536,6 +534,7 @@ def run_research(
     x_source: str = "xai",
     run_youtube: bool = False,
     timeouts: dict = None,
+    query_type: str = "general",
 ) -> tuple:
     """Run the research pipeline.
 
@@ -582,7 +581,7 @@ def run_research(
             sys.stderr.write(f"[web] Searching via {web_backend}\n")
             sys.stderr.flush()
             try:
-                web_items, web_error = _search_web(topic, config, from_date, to_date, depth)
+                web_items, web_error = _search_web(topic, config, from_date, to_date, depth, query_type=query_type)
                 if web_error and progress:
                     progress.show_error(f"Web error: {web_error}")
             except Exception as e:
@@ -653,7 +652,7 @@ def run_research(
             sys.stderr.write(f"[web] Searching via {web_backend}\n")
             sys.stderr.flush()
             web_future = executor.submit(
-                _search_web, topic, config, from_date, to_date, depth
+                _search_web, topic, config, from_date, to_date, depth, query_type
             )
 
         if has_dfs:
@@ -879,9 +878,10 @@ def main():
         help="Enable verbose debug logging",
     )
     parser.add_argument(
-        "--include-web",
-        action="store_true",
-        help="Include general web search alongside Reddit/X (lower weighted)",
+        "--query-type",
+        choices=["general", "recommendations", "news", "prompting"],
+        default="general",
+        help="Type of web search queries: general, recommendations, news, prompting",
     )
     parser.add_argument(
         "--days",
@@ -953,7 +953,6 @@ def main():
             "youtube": has_youtube,
             "web_search_backend": web_source,
             "parallel_ai": bool(config.get("PARALLEL_API_KEY")),
-            "brave": bool(config.get("BRAVE_API_KEY")),
             "openrouter": bool(config.get("OPENROUTER_API_KEY")),
             "dataforseo": env.has_dataforseo(config),
         }
@@ -991,7 +990,7 @@ def main():
             sources = args.sources
     else:
         # Validate requested sources against available
-        sources, error = env.validate_sources(args.sources, available, args.include_web)
+        sources, error = env.validate_sources(args.sources, available)
         if error:
             # If it's a warning about WebSearch fallback, print but continue
             if "WebSearch fallback" in error:
@@ -1059,6 +1058,7 @@ def main():
         x_source=x_source or "xai",
         run_youtube=has_youtube,
         timeouts=timeouts,
+        query_type=args.query_type,
     )
 
     # Processing phase
@@ -1151,7 +1151,7 @@ def main():
     elif dataforseo_error:
         source_info["dataforseo_skip_reason"] = dataforseo_error
     if not web_source:
-        source_info["web_skip_reason"] = "assistant will use WebSearch (add BRAVE_API_KEY for native search)"
+        source_info["web_skip_reason"] = "assistant will use WebSearch (add PARALLEL_API_KEY for native search)"
 
     # Output result
     output_result(report, args.emit, web_needed, args.topic, from_date, to_date, missing_keys, args.days, source_info)

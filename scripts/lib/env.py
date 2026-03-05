@@ -55,7 +55,6 @@ def get_config() -> Dict[str, Any]:
         ('XAI_API_KEY', None),
         ('OPENROUTER_API_KEY', None),
         ('PARALLEL_API_KEY', None),
-        ('BRAVE_API_KEY', None),
         ('OPENAI_MODEL_POLICY', 'auto'),
         ('OPENAI_MODEL_PIN', None),
         ('XAI_MODEL_POLICY', 'latest'),
@@ -101,20 +100,18 @@ def get_available_sources(config: Dict[str, Any]) -> str:
 
 def has_web_search_keys(config: Dict[str, Any]) -> bool:
     """Check if any web search API keys are configured."""
-    return bool(config.get('OPENROUTER_API_KEY') or config.get('PARALLEL_API_KEY') or config.get('BRAVE_API_KEY'))
+    return bool(config.get('OPENROUTER_API_KEY') or config.get('PARALLEL_API_KEY'))
 
 
 def get_web_search_source(config: Dict[str, Any]) -> Optional[str]:
     """Determine the best available web search backend.
 
-    Priority: Parallel AI > Brave > OpenRouter/Sonar Pro
+    Priority: Parallel AI > OpenRouter/Sonar Pro
 
-    Returns: 'parallel', 'brave', 'openrouter', or None
+    Returns: 'parallel', 'openrouter', or None
     """
     if config.get('PARALLEL_API_KEY'):
         return 'parallel'
-    if config.get('BRAVE_API_KEY'):
-        return 'brave'
     if config.get('OPENROUTER_API_KEY'):
         return 'openrouter'
     return None
@@ -141,13 +138,15 @@ def get_missing_keys(config: Dict[str, Any]) -> str:
         return 'all'
 
 
-def validate_sources(requested: str, available: str, include_web: bool = False) -> tuple[str, Optional[str]]:
+def validate_sources(requested: str, available: str) -> tuple[str, Optional[str]]:
     """Validate requested sources against available keys.
+
+    Web search is automatically included when web API keys are present
+    (available contains '-web' suffix or is 'all'/'web').
 
     Args:
         requested: 'auto', 'reddit', 'x', 'both', or 'web'
         available: Result from get_available_sources()
-        include_web: If True, add WebSearch to available sources
 
     Returns:
         Tuple of (effective_sources, error_message)
@@ -171,38 +170,35 @@ def validate_sources(requested: str, available: str, include_web: bool = False) 
             return 'web', f"Only web search keys configured. Add OPENAI_API_KEY for Reddit, XAI_API_KEY for X."
 
     if requested == 'auto':
-        # Add web to sources if include_web is set
-        if include_web:
-            if available == 'both':
-                return 'all', None  # reddit + x + web
-            elif available == 'reddit':
-                return 'reddit-web', None
-            elif available == 'x':
-                return 'x-web', None
         return available, None
 
     if requested == 'web':
         return 'web', None
 
     if requested == 'both':
-        if available not in ('both',):
-            missing = 'xAI' if available == 'reddit' else 'OpenAI'
-            return 'none', f"Requested both sources but {missing} key is missing. Use --sources=auto to use available keys."
-        if include_web:
+        if available not in ('both', 'all'):
+            base = available.replace('-web', '')
+            if base in ('reddit', 'x'):
+                missing = 'xAI' if base == 'reddit' else 'OpenAI'
+                return 'none', f"Requested both sources but {missing} key is missing. Use --sources=auto to use available keys."
+        # Return 'all' if web keys are available, 'both' otherwise
+        if 'web' in available or available == 'all':
             return 'all', None
         return 'both', None
 
     if requested == 'reddit':
-        if available == 'x':
+        if available in ('x', 'x-web'):
             return 'none', "Requested Reddit but only xAI key is available."
-        if include_web:
+        # Return 'reddit-web' if web keys are available
+        if 'web' in available or available == 'all':
             return 'reddit-web', None
         return 'reddit', None
 
     if requested == 'x':
-        if available == 'reddit':
+        if available in ('reddit', 'reddit-web'):
             return 'none', "Requested X but only OpenAI key is available."
-        if include_web:
+        # Return 'x-web' if web keys are available
+        if 'web' in available or available == 'all':
             return 'x-web', None
         return 'x', None
 

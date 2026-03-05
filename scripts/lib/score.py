@@ -13,7 +13,7 @@ WEIGHT_ENGAGEMENT = 0.30
 # WebSearch weights (no engagement, reweighted to 100%)
 WEBSEARCH_WEIGHT_RELEVANCE = 0.55
 WEBSEARCH_WEIGHT_RECENCY = 0.45
-WEBSEARCH_SOURCE_PENALTY = 15  # Points deducted for lacking engagement
+WEBSEARCH_SOURCE_PENALTY = 8   # Points deducted for lacking engagement
 
 # WebSearch date confidence adjustments
 WEBSEARCH_VERIFIED_BONUS = 10   # Bonus for URL-verified recent date (high confidence)

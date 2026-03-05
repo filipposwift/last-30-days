@@ -21,8 +21,7 @@ Research any topic across Reddit, X, YouTube, and the web from the last 30 days.
 | Reddit (OpenAI Responses API) | `OPENAI_API_KEY` | Yes |
 | X (xAI API) | `XAI_API_KEY` | Yes |
 | YouTube (Data API v3) | `YOUTUBE_API_KEY` | No |
-| Web search (Brave) | `BRAVE_API_KEY` | No |
-| Web search (Parallel AI) | `PARALLEL_API_KEY` | No |
+| Web search (Parallel AI) | `PARALLEL_API_KEY` | No (recommended) |
 | Web search (OpenRouter) | `OPENROUTER_API_KEY` | No |
 | Google AI Overview (DataForSEO) | `DATAFORSEO_LOGIN` + `DATAFORSEO_PASSWORD` | No |
 
@@ -55,7 +54,7 @@ python3 scripts/last30days.py --diagnose
 | `--deep` | Comprehensive (50-70 Reddit, 40-60 X) |
 | `--sources=reddit` | Reddit only |
 | `--sources=x` | X only |
-| `--include-web` | Add native web search (requires web search API key) |
+| `--query-type=TYPE` | Web search query type: general, recommendations, news, prompting |
 | `--store` | Persist findings to SQLite (for watchlist) |
 | `--diagnose` | Show source availability and exit |
 
@@ -169,7 +168,7 @@ When the user asked "how do I build a review loop workflow", the skill generated
 | `reddit.com` | Thread URLs (public JSON) |
 | `googleapis.com` (YouTube Data API v3) | Search query |
 | `youtube.com` (youtube-transcript-api) | Video ID (transcript fetch) |
-| Optional web APIs (Brave/Parallel/OpenRouter) | Search query |
+| Optional web APIs (Parallel AI/OpenRouter) | Search query |
 | DataForSEO (`api.dataforseo.com`) | Search query |
 
 API keys are never shared across providers. Research data stays local.

@@ -1,6 +1,6 @@
 """DataForSEO Google AI Mode search for last-30-days skill.
 
-Supplemental web source that runs alongside Brave/Parallel/OpenRouter.
+Supplemental web source that runs alongside Parallel AI/OpenRouter.
 Returns Google's AI overview (synthesized answer) + reference URLs as web items.
 
 API docs: https://docs.dataforseo.com/v3/serp/google/ai_mode/live/advanced/
@@ -42,7 +42,7 @@ def search_web(
 
     Returns:
         Tuple of (web_items, ai_overview_text)
-        web_items are raw dicts matching brave_search schema.
+        web_items are raw dicts matching websearch item schema.
 
     Raises:
         http.HTTPError: On API errors
@@ -238,7 +238,7 @@ def _normalize_results(
                     "snippet": snippet[:500],
                     "date": None,
                     "date_confidence": "low",
-                    "relevance": 0.75,  # Higher than Brave — Google curated these
+                    "relevance": 0.75,  # Google curated these
                     "why_relevant": _extract_mention(ai_overview, title, domain),
                 })
 

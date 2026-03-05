@@ -13,7 +13,6 @@ metadata:
         - OPENAI_API_KEY
         - XAI_API_KEY
       optionalEnv:
-        - BRAVE_API_KEY
         - PARALLEL_API_KEY
         - OPENROUTER_API_KEY
         - DATAFORSEO_LOGIN
@@ -96,8 +95,10 @@ This text MUST appear before you call any tools. It confirms to the user that yo
 **CRITICAL: Run this command in the FOREGROUND with a 5-minute timeout. Do NOT use run_in_background. The full output contains Reddit, X, AND YouTube data that you need to read completely.**
 
 ```bash
-uv run --with youtube-transcript-api python3 "{baseDir}/scripts/last30days.py" "$ARGUMENTS" --emit=compact
+uv run --with youtube-transcript-api python3 "{baseDir}/scripts/last30days.py" "$ARGUMENTS" --query-type=$QUERY_TYPE --emit=compact
 ```
+
+Where `$QUERY_TYPE` is the query type you parsed earlier (general, recommendations, news, or prompting).
 
 Use a **timeout of 300000** (5 minutes) on the Bash call. The script typically takes 1-3 minutes.
 
@@ -115,45 +116,16 @@ The script will automatically:
 
 ---
 
-## STEP 2: DO WEBSEARCH AFTER SCRIPT COMPLETES
+## STEP 2: WEBSEARCH FALLBACK (only if needed)
 
-After the script finishes, do WebSearch to supplement with blogs, tutorials, and news.
+The script now includes native web search via Parallel AI (when `PARALLEL_API_KEY` is configured). Web results are included automatically in the script output.
 
-For **ALL modes**, do WebSearch to supplement (or provide all data in web-only mode).
+**If the output contains `### WEBSEARCH REQUIRED ###`**, it means no web search API key is configured. In that case, do manual WebSearch to supplement:
 
-Choose search queries based on QUERY_TYPE:
-
-**If RECOMMENDATIONS** ("best X", "top X", "what X should I use"):
-
-- Search for: `best {TOPIC} recommendations`
-- Search for: `{TOPIC} list examples`
-- Search for: `most popular {TOPIC}`
-- Goal: Find SPECIFIC NAMES of things, not generic advice
-
-**If NEWS** ("what's happening with X", "X news"):
-
-- Search for: `{TOPIC} news 2026`
-- Search for: `{TOPIC} announcement update`
-- Goal: Find current events and recent developments
-
-**If PROMPTING** ("X prompts", "prompting for X"):
-
-- Search for: `{TOPIC} prompts examples 2026`
-- Search for: `{TOPIC} techniques tips`
-- Goal: Find prompting techniques and examples to create copy-paste prompts
-
-**If GENERAL** (default):
-
-- Search for: `{TOPIC} 2026`
-- Search for: `{TOPIC} discussion`
-- Goal: Find what people are actually saying
-
-For ALL query types:
-
-- **USE THE USER'S EXACT TERMINOLOGY** - don't substitute or add tech names based on your knowledge
+- Use the user's exact terminology
 - EXCLUDE reddit.com, x.com, twitter.com (covered by script)
 - INCLUDE: blogs, tutorials, docs, news, GitHub repos
-- **DO NOT output "Sources:" list** - this is noise, we'll show stats at the end
+- Do 2-3 targeted searches based on QUERY_TYPE
 
 **Options** (passed through from user's command):
 
@@ -172,7 +144,7 @@ The Judge Agent must:
 
 1. Weight Reddit/X sources HIGHER (they have engagement signals: upvotes, likes)
 2. Weight YouTube sources HIGH (they have views, likes, and transcript content)
-3. Weight WebSearch sources LOWER (no engagement data)
+3. Weight WebSearch sources with moderate confidence (Parallel AI curated results, but no engagement data)
 4. Identify patterns that appear across ALL sources (strongest signals)
 5. Note any contradictions between sources
 6. Extract the top 3-5 actionable insights
@@ -318,7 +290,7 @@ KEY PATTERNS from the research:
 ├─ 🟠 Reddit: {N} threads │ {N} upvotes │ {N} comments
 ├─ 🔵 X: {N} posts │ {N} likes │ {N} reposts
 ├─ 🔴 YouTube: {N} videos │ {N} views │ {N} with transcripts
-├─ 🌐 Web: {N} pages (supplementary)
+├─ 🌐 Web: {N} pages
 └─ 🗣️ Top voices: @{handle1} ({N} likes), @{handle2} │ r/{sub1}, r/{sub2}
 ---
 ```
@@ -515,7 +487,7 @@ Want another prompt? Just tell me what you're creating next.
 - Sends search queries to YouTube Data API v3 (`googleapis.com`) for video discovery (read-only, requires YOUTUBE_API_KEY)
 - Uses `youtube-transcript-api` (pip) to fetch public video transcripts (no auth needed)
 - Optionally sends video URLs to Supadata API (`api.supadata.ai`) for transcript fallback when captions are unavailable and for X/Twitter video transcripts (requires SUPADATA_API_KEY)
-- Optionally sends search queries to Brave Search API, Parallel AI API, or OpenRouter API for web search
+- Optionally sends search queries to Parallel AI API or OpenRouter API for web search
 - Optionally sends search queries to DataForSEO API (`api.dataforseo.com`) for Google AI Overview
 - Fetches public Reddit thread data from `reddit.com` for engagement metrics
 - Stores research findings in local SQLite database (watchlist mode only)
